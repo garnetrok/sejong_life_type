@@ -176,14 +176,15 @@ h1{font-size:31px;line-height:1.2;margin:14px 0 10px;letter-spacing:-.8px}
     </div>
 
     <div class="hashtag" id="rHash"></div>
+    <div
+      id="saveStatus"
+      style="margin-top:10px;font-size:13px;color:#6c7a89"
+      aria-live="polite"
+    ></div>
     <div class="cta">🎁 결과 화면을 운영진에게 보여주고<br>뽑기판 1회 참여하세요!</div>
     <button class="secondary" style="width:100%;margin-top:12px" onclick="restart()">다시 해보기</button>
     <div class="footnote">※ 본 테스트는 행사 참여용 간이 유형테스트로, 전문적인 성향 진단이 아닙니다.</div>
   </div>
-  <div
-  id="saveStatus"
-  style="margin-top:10px;font-size:13px;color:#6c7a89"
-></div>
 </section>
 
 </div>
@@ -356,7 +357,8 @@ function nextQ(){
   if(idx<questions.length-1){idx++;renderQ();}else{calcResult();}
 }
 function prevQ(){ if(idx>0){idx--;renderQ();}else{show("intro");} }
-function calcResult(){
+
+async function calcResult(){
   const score={health:0,growth:0,home:0,balance:0,connect:0};
   selected.forEach((s,qi)=>{
     const key=questions[qi].a[s][1];
@@ -374,7 +376,60 @@ function calcResult(){
     }
   }
   renderResult(winner);
+  await saveSurveyResponse(winner,score);
 }
+
+async function saveSurveyResponse(winner,score){
+  const statusEl=document.getElementById("saveStatus");
+  statusEl.textContent="응답을 저장하는 중입니다...";
+  statusEl.style.color="#6c7a89";
+
+  // Q1~Q6에서 선택한 유형을 문항별로 따로 저장
+  const choices=selected.map((answerIndex,questionIndex)=>{
+    return questions[questionIndex].a[answerIndex][1];
+  });
+
+  // 질문 내용과 실제 선택지 문구까지 함께 저장
+  const answerDetails=selected.map((answerIndex,questionIndex)=>{
+    const question=questions[questionIndex];
+    const answer=question.a[answerIndex];
+
+    return {
+      question_no:questionIndex+1,
+      question_text:question.q,
+      answer_index:answerIndex,
+      answer_text:answer[0],
+      selected_type:answer[1]
+    };
+  });
+
+  try{
+    const {error}=await db
+      .from("survey_responses")
+      .insert({
+        survey_id:"sejong-life-2026",
+        result_type:winner,
+        q1_choice:choices[0],
+        q2_choice:choices[1],
+        q3_choice:choices[2],
+        q4_choice:choices[3],
+        q5_choice:choices[4],
+        q6_choice:choices[5],
+        answer_details:answerDetails,
+        scores:score
+      });
+
+    if(error)throw error;
+
+    statusEl.textContent="✓ 응답이 정상적으로 저장되었습니다.";
+    statusEl.style.color="#3fa55b";
+  }catch(error){
+    console.error("Supabase 저장 오류:",error);
+    statusEl.textContent="응답 저장에 실패했습니다. 운영진에게 말씀해주세요.";
+    statusEl.style.color="#d94848";
+  }
+}
+
 function renderResult(key){
   const r=types[key];
   document.getElementById("rType").textContent=r.label;
@@ -393,7 +448,11 @@ function renderResult(key){
   show("result");
 }
 function restart(){
-  idx=0; selected=Array(questions.length).fill(null);
+  idx=0;
+  selected=Array(questions.length).fill(null);
+  const statusEl=document.getElementById("saveStatus");
+  statusEl.textContent="";
+  statusEl.style.color="#6c7a89";
   show("intro");
 }
 </script>
