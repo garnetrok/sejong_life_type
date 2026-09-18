@@ -384,12 +384,7 @@ async function saveSurveyResponse(winner,score){
   statusEl.textContent="응답을 저장하는 중입니다...";
   statusEl.style.color="#6c7a89";
 
-  // Q1~Q6에서 선택한 유형을 문항별로 따로 저장
-  const choices=selected.map((answerIndex,questionIndex)=>{
-    return questions[questionIndex].a[answerIndex][1];
-  });
-
-  // 질문 내용과 실제 선택지 문구까지 함께 저장
+  // 기존 DB의 answers 열에 Q1~Q6의 상세 응답을 배열로 저장
   const answerDetails=selected.map((answerIndex,questionIndex)=>{
     const question=questions[questionIndex];
     const answer=question.a[answerIndex];
@@ -409,13 +404,7 @@ async function saveSurveyResponse(winner,score){
       .insert({
         survey_id:"sejong-life-2026",
         result_type:winner,
-        q1_choice:choices[0],
-        q2_choice:choices[1],
-        q3_choice:choices[2],
-        q4_choice:choices[3],
-        q5_choice:choices[4],
-        q6_choice:choices[5],
-        answer_details:answerDetails,
+        answers:answerDetails,
         scores:score
       });
 
